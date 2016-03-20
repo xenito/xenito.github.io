@@ -1,0 +1,8 @@
+excerpt_separator: ""
+pygments: true
+markdown: kramdown
+url: http://xenito.github.io
+title: xenito
+tagline: Sometimes you cannot leave it to other people.
+description: General blog but one that will focus on improving society by better system. Well at least that is the intention.
+paginate: 5
