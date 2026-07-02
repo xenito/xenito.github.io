@@ -132,7 +132,7 @@ export class AudioEngine {
       env[f] = Math.max(0, e - prev);
       prev = e;
     }
-    // autocorrelate over 60-180 BPM lags
+    // coarse autocorrelation over 60-180 BPM lags
     const fps = sr / hop;
     let bestBpm = 120, bestScore = -1;
     for (let bpm = 60; bpm <= 180; bpm += 0.5) {
@@ -143,16 +143,29 @@ export class AudioEngine {
       s /= (frames - lag);
       if (s > bestScore) { bestScore = s; bestBpm = bpm; }
     }
-    // beat phase: offset with max envelope sum on the beat grid
-    const lag = fps * 60 / bestBpm;
-    let bestOff = 0, bestSum = -1;
-    for (let o = 0; o < lag; o += lag / 16) {
-      let s = 0;
-      for (let f = o; f < frames; f += lag) s += env[Math.floor(f)];
-      if (s > bestSum) { bestSum = s; bestOff = o; }
+    // joint fine refinement of tempo and phase: score each (bpm, offset) pair
+    // by summing the envelope in a small window around every predicted beat.
+    // The coarse 0.5 BPM grid alone lets the beat grid drift over a long track,
+    // which smears the phase estimate.
+    const win = 2; // frames each side (~±23 ms)
+    const envAt = (f) => {
+      const c = Math.round(f);
+      let m = 0;
+      for (let i = Math.max(0, c - win); i <= Math.min(frames - 1, c + win); i++) m = Math.max(m, env[i]);
+      return m;
+    };
+    let fineBpm = bestBpm, fineOff = 0, fineScore = -1;
+    for (let bpm = bestBpm - 1; bpm <= bestBpm + 1; bpm += 0.05) {
+      const lag = fps * 60 / bpm;
+      for (let o = 0; o < lag; o += lag / 24) {
+        let s = 0, n = 0;
+        for (let f = o; f < frames; f += lag) { s += envAt(f); n++; }
+        s /= n;
+        if (s > fineScore) { fineScore = s; fineBpm = bpm; fineOff = o; }
+      }
     }
-    this.bpm = bestBpm;
-    this.beatOffset = bestOff / fps;
+    this.bpm = fineBpm;
+    this.beatOffset = fineOff / fps;
   }
 }
 
