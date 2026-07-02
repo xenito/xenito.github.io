@@ -37,6 +37,10 @@
   #credit { position: fixed; right: 16px; bottom: 14px; z-index: 5; font-size: 11px;
     color: #6b7378; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
   #credit a { color: #8b949c; }
+  @media (max-width: 640px) {
+    #credit { display: none; }
+    #hud { bottom: max(14px, env(safe-area-inset-bottom)); }
+  }
 </style>
 <script type="importmap">
 {

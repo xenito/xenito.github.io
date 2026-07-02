@@ -26,7 +26,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0e11);
 scene.fog = new THREE.Fog(0x0b0e11, 18, 46);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 120);
+// wider FOV on portrait screens (phones) so the truck stays in frame
+const fovFor = (aspect) => (aspect < 1 ? 68 : 50);
+const camera = new THREE.PerspectiveCamera(fovFor(window.innerWidth / window.innerHeight), window.innerWidth / window.innerHeight, 0.1, 120);
 camera.position.set(7, 3.4, 9);
 
 const composer = new EffectComposer(renderer);
@@ -37,6 +39,7 @@ composer.addPass(new OutputPass());
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
+  camera.fov = fovFor(camera.aspect);
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
