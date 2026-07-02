@@ -144,8 +144,9 @@ rack(0, -13, 0); rack(-13.5, 0, Math.PI / 2); rack(13.5, 1, Math.PI / 2); rack(1
 
 // ---------------------------------------------------------------------------
 // lighting
-scene.add(new THREE.HemisphereLight(0x9fb4c8, 0x14171a, 0.55));
-const sun = new THREE.DirectionalLight(0xf2ede0, 1.5);
+scene.add(new THREE.HemisphereLight(0x9fb4c8, 0x22262b, 1.35));
+scene.add(new THREE.AmbientLight(0x404650, 0.5));
+const sun = new THREE.DirectionalLight(0xf2ede0, 2.3);
 sun.position.set(8, 14, 6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -175,13 +176,13 @@ for (const side of [-1, 1]) {
   lift.truck.add(glow);
 }
 
-// headlight beams from the front work lights
-const beamMat = new THREE.MeshBasicMaterial({
-  color: 0xfff2c4, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-const beam = new THREE.Mesh(new THREE.ConeGeometry(0.9, 4.5, 20, 1, true), beamMat);
-beam.rotation.x = Math.PI / 2 - 0.18;
-beam.position.set(0, 1.6, 2.6);
-lift.truck.add(beam);
+// headlight: a real spotlight thrown ahead of the truck from the guard lights
+const headlight = new THREE.SpotLight(0xfff2c4, 0, 14, 0.5, 0.45, 1.2);
+headlight.position.set(0, 1.9, 0.2);
+const headlightTarget = new THREE.Object3D();
+headlightTarget.position.set(0, 0, 5);
+lift.truck.add(headlight, headlightTarget);
+headlight.target = headlightTarget;
 
 // ---------------------------------------------------------------------------
 // choreography state
@@ -237,12 +238,13 @@ const shots = [
     eye.y = 0.9;
     return { eye, look: p.pos.clone().setY(1.1) };
   },
-  (p, t) => { // fork close-up
+  (p, t) => { // fork close-up, offset to the side so the mast doesn't fill the frame
     const fwd = new THREE.Vector3(Math.sin(p.heading + state.spinOffset), 0, Math.cos(p.heading + state.spinOffset));
-    const eye = p.pos.clone().add(fwd.clone().multiplyScalar(3.0));
-    eye.y = 0.7 + state.liftF * 2.4;
-    const look = p.pos.clone().add(fwd.clone().multiplyScalar(0.8));
-    look.y = 0.4 + state.liftF * 3.0;
+    const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+    const eye = p.pos.clone().add(fwd.clone().multiplyScalar(4.2)).add(side.multiplyScalar(1.8));
+    eye.y = 0.9 + state.liftF * 2.2;
+    const look = p.pos.clone().add(fwd.clone().multiplyScalar(0.9));
+    look.y = 0.5 + state.liftF * 2.8;
     return { eye, look };
   },
   (p, t) => { // high crane shot
@@ -334,11 +336,11 @@ function frame() {
 
   // --- lights ---
   const pulse = state.beatFlash * state.beatFlash;
-  tealLight.intensity = 14 * (0.25 + lv.mid * 1.4 + pulse * 0.8);
-  amberLight.intensity = 10 * (0.2 + lv.bass * 1.6);
+  tealLight.intensity = 16 * (0.35 + lv.mid * 1.4 + pulse * 0.8);
+  amberLight.intensity = 12 * (0.3 + lv.bass * 1.6);
   for (const lm of lift.workLights) lm.emissiveIntensity = 0.5 + pulse * 2.6 + lv.treble * 2.2;
   safetyMat.opacity = 0.12 + 0.4 * pulse;
-  beamMat.opacity = 0.05 + 0.1 * lv.level;
+  headlight.intensity = 20 * (0.3 + lv.level * 0.9 + pulse * 0.4);
   bloom.strength = 0.4 + lv.level * 0.9 + pulse * 0.35;
 
   // --- camera: new shot every 2 bars, cut on the bar line ---
