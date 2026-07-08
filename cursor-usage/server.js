@@ -10,15 +10,28 @@
  * CURSOR_SESSION_TOKEN env var or pasted into the UI (sent per-request in the
  * x-session-token header; never persisted server-side).
  *
+ * Access control: all data endpoints require an access PIN (default 2911,
+ * override with the ACCESS_PIN env var) so the server can be exposed on a
+ * local network, e.g. to view from a phone.
+ *
  * Usage: node server.js  (then open http://localhost:4321)
  */
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4321;
 const UPSTREAM = 'cursor.com';
+const ACCESS_PIN = process.env.ACCESS_PIN || '2911';
+
+function pinOk(req) {
+  const given = String(req.headers['x-access-pin'] || '');
+  const a = crypto.createHash('sha256').update(given).digest();
+  const b = crypto.createHash('sha256').update(ACCESS_PIN).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 // Only these upstream paths may be proxied.
 const ALLOWED = new Set([
@@ -81,6 +94,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
   if (url.pathname.startsWith('/proxy/')) {
+    if (!pinOk(req)) return sendJson(res, 403, { error: 'wrong PIN', pinRequired: true });
     const token = req.headers['x-session-token'] || process.env.CURSOR_SESSION_TOKEN;
     if (!token) return sendJson(res, 401, { error: 'no session token: set CURSOR_SESSION_TOKEN or paste one in the UI' });
     return proxy(req, res, String(token).trim());
@@ -91,7 +105,9 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
 
+  // Doubles as the PIN check for the UI: 403 until the correct PIN is supplied.
   if (url.pathname === '/config') {
+    if (!pinOk(req)) return sendJson(res, 403, { error: 'wrong PIN', pinRequired: true });
     return sendJson(res, 200, { hasEnvToken: Boolean(process.env.CURSOR_SESSION_TOKEN) });
   }
 
@@ -110,5 +126,6 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Cursor usage viewer running at http://localhost:${PORT}`);
+  console.log(`Access PIN: ${ACCESS_PIN}${process.env.ACCESS_PIN ? '' : ' (default — override with the ACCESS_PIN env var)'}`);
   console.log(process.env.CURSOR_SESSION_TOKEN ? 'Using session token from CURSOR_SESSION_TOKEN env var.' : 'No CURSOR_SESSION_TOKEN set — paste your token in the UI.');
 });
