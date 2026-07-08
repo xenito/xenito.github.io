@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aquarium growth sandbox — editable growth rules</title>
+<style>
+  :root { --teal: #14b18b; --panel: rgba(10, 20, 26, 0.82); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #05131a; color: #dfeef2;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #stage, #stage canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #panel { position: fixed; top: 14px; left: 14px; width: 340px; max-width: calc(100vw - 28px);
+    max-height: calc(100vh - 28px); overflow: auto; z-index: 5; background: var(--panel);
+    backdrop-filter: blur(8px); border: 1px solid rgba(20, 177, 139, 0.35);
+    border-radius: 14px; padding: 14px 15px 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+  #panel h1 { font-size: 15px; letter-spacing: 0.03em; }
+  #panel h1 em { color: var(--teal); font-style: normal; }
+  #panel .sub { color: #86a0a8; font-size: 11.5px; margin: 3px 0 12px; line-height: 1.45; }
+  label.field { display: block; font-size: 11px; color: #9fb6bd; margin: 10px 0 4px;
+    text-transform: uppercase; letter-spacing: 0.09em; }
+  select, textarea, button { font-family: inherit; color: #eaf6f8; background: #0c1e26;
+    border: 1px solid #1d3b45; border-radius: 8px; padding: 8px 10px; font-size: 13px; width: 100%; }
+  select:focus, textarea:focus { outline: none; border-color: var(--teal); }
+  textarea { height: 210px; resize: vertical; font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.45; white-space: pre; tab-size: 2; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .row button { cursor: pointer; font-weight: 600; }
+  #grow { background: var(--teal); color: #05131a; border-color: var(--teal); }
+  #grow:hover { filter: brightness(1.08); }
+  #replant { background: #123039; }
+  #replant:hover { border-color: var(--teal); }
+  #err { color: #ff9a8a; font-size: 12px; min-height: 1em; margin-top: 8px; white-space: pre-wrap; }
+  #meta { color: #7f989f; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  #meta b { color: var(--teal); font-weight: 600; }
+  details { margin-top: 12px; border-top: 1px solid #163038; padding-top: 10px; }
+  summary { cursor: pointer; font-size: 12px; color: #9fb6bd; }
+  details p, details li { font-size: 11.5px; color: #9fb6bd; line-height: 1.5; }
+  details ul { margin: 6px 0 0 16px; }
+  code { color: var(--teal); }
+  #hint { position: fixed; right: 14px; bottom: 12px; z-index: 5; font-size: 11px;
+    color: #5f7880; text-shadow: 0 1px 2px #000; }
+  .growbar { height: 4px; background: #0c1e26; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .growbar > div { height: 100%; width: 0%; background: var(--teal); transition: width 0.1s linear; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="panel">
+  <h1>Aquarium <em>growth</em> sandbox</h1>
+  <p class="sub">A structure grown inside the tank from an editable rulebook.
+    Edit the rules, press <b style="color:#14b18b">Grow</b>, and watch it accrete
+    from its base. This is the Phase‑0 previewer described in <code>PLAN.md</code>.</p>
+
+  <label class="field" for="preset">Rulebook preset</label>
+  <select id="preset"></select>
+
+  <label class="field" for="book">Rulebook (editable)</label>
+  <textarea id="book" spellcheck="false"></textarea>
+  <div id="err"></div>
+
+  <div class="row">
+    <button id="grow">Grow ▸</button>
+    <button id="replant">Re-seed</button>
+  </div>
+  <div class="growbar"><div id="growfill"></div></div>
+  <div id="meta"></div>
+
+  <details>
+    <summary>Rulebook syntax</summary>
+    <p>Parameters: <code>key = value</code> (angle, length, thickness, taper,
+      fatten, iterations, jitter, gravity, leafsize, seed, axiom).</p>
+    <p>Rules rewrite a symbol each iteration: <code>X -> F[+X][-X]</code>.
+      Weighted/random rules: <code>X ->(0.3) F X</code>.</p>
+    <p>Turtle symbols:</p>
+    <ul>
+      <li><code>F</code> grow a segment · <code>f</code> move, no growth</li>
+      <li><code>+ -</code> turn · <code>&amp; ^</code> pitch · <code>\ /</code> roll · <code>|</code> u-turn</li>
+      <li><code>[ ]</code> branch push/pop · <code>! .</code> thin/thicken</li>
+      <li><code>'</code> shift colour · <code>L</code> place a polyp/frond</li>
+    </ul>
+  </details>
+</div>
+
+<div id="hint">drag to orbit · scroll to zoom</div>
+
+<script type="module" src="./sandbox.js"></script>
+</body>
+</html>
